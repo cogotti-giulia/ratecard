@@ -1,9 +1,10 @@
 import argparse
 import sys
 
-from utils.config import RATECARD_CONFIG
+from utils.config import RATECARD_CONFIG, DEBUG_MODE
 from utils.costants import COUNTRY_CODE_NAME_MAP
 from utils.database.db_connect import get_db_connection
+from utils.database.sql import SqlHelper
 from utils.ratecard.evaluator import RatecardRouteEvaluator
 from utils.ratecard.merger import SupplierRateCardMerger
 from utils.ratecard.twt import RateCardTwt
@@ -79,6 +80,12 @@ def main(args):
           evaluator.assign_route_weights('colt', 'twt')
           evaluator.assign_route_weights('twt', 'colt')
 
+        if not DEBUG_MODE:
+          sql_helper = SqlHelper(conn)
+          ratecard_tables = [RATECARD_CONFIG[supplier]["ratecard_table"].format(origin_country_code=origin_country_code) for supplier in args.supplier]
+          surcharge_tables = [RATECARD_CONFIG[supplier]["surcharge_table"].format(origin_country_code=origin_country_code) for supplier in args.supplier]
+          tables = ratecard_tables + surcharge_tables
+          sql_helper.drop_tables(tables)
   print '\n'
 
 
@@ -123,11 +130,6 @@ if __name__ == '__main__':
     '--surcharge-asr-colt-fn',
     type=str,
     help=u"The surcharge COLT file (the one with actual prices for the destination, based on surcharge group) to combine with `surcharge-origin-colt-fn` to apply on COLT ratecard."
-  )
-  parser.add_argument(
-    '-d', '--debug',
-    action='store_true',
-    help=u"Enable debug mode."
   )
   # TODO
   # --dry-run

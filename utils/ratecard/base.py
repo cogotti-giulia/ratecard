@@ -46,15 +46,12 @@ class RateCardGenerationService(object):
       """.format(ratecard_table=self._ratecard_table)
       cursor.execute(sql, (self._ratecard_fn,))
       end = time.time()
-      self._logger.log(".....successfully inserted {0} records in {1:.4f}s.".format(len(data_to_insert), end - start))
+      self._logger.log(".....successfully inserted {0} records in {1:.4f}s.".format(cursor.rowcount, end - start))
 
   def _create_ratecard_table_with_index(self):
     """
     Creates ratecard table if it doesn't exist, adding an index on dialprefix to speedup any further operations.
     """
-
-    self._logger.log("Creating {} table in the db (and index on dialprefix)...".format(self._ratecard_table))
-
     self._sql_helper.create_table(
       self._ratecard_table,
       columns=[("dialprefix", "bigint", "DEFAULT NULL"),

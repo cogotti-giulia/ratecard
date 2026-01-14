@@ -16,7 +16,6 @@ class SupplierRateCardMerger(object):
     self._sql_helper = SqlHelper(conn)
     self._logger = Logger()
 
-
   def _warn_on_missing_buyrates(self, base_supplier):
     with self._conn.cursor() as cursor:
       sql = """
@@ -43,16 +42,14 @@ class SupplierRateCardMerger(object):
       merged_table = RATECARD_CONFIG[base_supplier]['merged_table'].format(
         origin_country_code=self._origin_country_code)
       sql = """
-          CREATE TABLE {merged_table} AS
-         SELECT 
-            fallback.dialprefix, 
-            CASE 
-              WHEN base.dialprefix=fallback.dialprefix THEN base.destination 
-              ELSE fallback.destination 
-            END AS destination,
-            base.buyrate
+        CREATE TABLE {merged_table} AS
+         SELECT fallback.dialprefix, 
+                  CASE 
+                    WHEN base.dialprefix=fallback.dialprefix THEN base.destination 
+                    ELSE fallback.destination 
+                  END AS destination,
+                  base.buyrate
          FROM {fallback_supplier} fallback
-         -- 
          LEFT JOIN (
            -- quanto e lungo il miglior (piu lungo) prefisso COLT per ogni prefisso TWT 
              SELECT 
@@ -70,12 +67,11 @@ class SupplierRateCardMerger(object):
            AND LENGTH(base.dialprefix) = max_table.max_len
             UNION ALL
             -- tutto quello, evidando duplicati, presente nella base ma non nell'altra
-  SELECT base_no_match.dialprefix, base_no_match.destination, base_no_match.buyrate
-    from {base_supplier} base_no_match 
-    where base_no_match.dialprefix NOT IN (
-    SELECT fallback_no_match.dialprefix
-    from {fallback_supplier} fallback_no_match);
-
+          SELECT base_no_match.dialprefix, base_no_match.destination, base_no_match.buyrate
+            from {base_supplier} base_no_match 
+            where base_no_match.dialprefix NOT IN (
+            SELECT fallback_no_match.dialprefix
+            from {fallback_supplier} fallback_no_match);
          """.format(
         merged_table=merged_table,
         base_supplier=RATECARD_CONFIG[base_supplier]['ratecard_table'].format(
@@ -91,7 +87,6 @@ class SupplierRateCardMerger(object):
         table=merged_table,
         column="dialprefix"
       )
-
 
       self._logger.log(
         "...succesfullty inserted {} into table {} in {:.4f}s".format(cursor.rowcount, RATECARD_CONFIG[base_supplier][

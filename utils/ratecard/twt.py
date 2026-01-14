@@ -10,13 +10,6 @@ cfg = RATECARD_CONFIG['twt']
 
 
 class RateCardTwt(RateCardGenerationService):
-  STANDARDIZED_SURCHARGE_COLUMNS = {
-    'ORIGIN NAME': 'origin_name',
-    'ORIGIN PREFIX': 'origin_prefix',
-    'DESTINATION': 'destination',
-    'SUR EUR': 'surcharge_eur',
-  }
-
   def __init__(self, conn, origin_country_code, ratecard_fn, surcharge_fn):
     self._surcharge_fn = surcharge_fn
     self.STANDARDIZED_SURCHARGE_COLUMNS = cfg['surcharge_columns']
@@ -35,9 +28,9 @@ class RateCardTwt(RateCardGenerationService):
     if clean_existing:
       self._sql_helper.drop_tables(self._surcharge_table)
     self._create_surcharge_table()
-    # Load all data
+
     df = pd.read_excel(self._surcharge_fn, header=2)
-    # Identify the split point
+
     # look for the row where the first column repeats the header name
     first_col_header = df.columns[0]
     split_idx = df[df[first_col_header] == first_col_header].index
@@ -52,33 +45,30 @@ class RateCardTwt(RateCardGenerationService):
       # df2.columns = df.iloc[idx]
       data_frames = [df1, df2]
     else:
-      data_frames = [
-        df]  # in case twt wakes up and decides to use one table as every human would have done on this planet
+      # in case twt wakes up and decides to use one table as every human would have done on this planet
+      data_frames = [df]
 
-    # 2. Process and Insert
     with self._conn.cursor() as cursor:
       sql = "INSERT INTO {0} (origin_name, origin_prefix, destination, surcharge_eur) VALUES (%s, %s, %s, %s)".format(
         self._surcharge_table)
 
       for sub_df in data_frames:
-        # Clean
+        # -- cleaning df
         sub_df.dropna(how="all", inplace=True)
         sub_df = sub_df.rename(columns=self.STANDARDIZED_SURCHARGE_COLUMNS)
-
-        # Select and clean strings
+        # -- getting relevant columns
         relevant_cols = ['origin_name', 'origin_prefix', 'destination', 'surcharge_eur']
         final_df = sub_df[relevant_cols].copy()
 
         final_df['origin_name'] = final_df['origin_name'].str.strip()
         final_df['destination'] = final_df['destination'].str.strip()
 
-        # Handle NaN -> None safely for SQL
+        # -- handle NaN -> None safely for SQL
         values_to_insert = final_df.where(pd.notnull(final_df), None).values.tolist()
 
-        # Batch Insert
+        # -- batch insert
         for i in range(0, len(values_to_insert), BATCH_INSERT_SIZE):
           cursor.executemany(sql, values_to_insert)
-
         self._logger.log("Inserted batch of {} records.".format(len(values_to_insert)))
 
   def _apply_surcharge_to_ratecard(self):
@@ -104,10 +94,3 @@ class RateCardTwt(RateCardGenerationService):
       cursor.execute(sql, {'origin_name': self._origin_country, 'origin_prefix': str(origin_country_prefix)[0] + '%%'})
       end = time.time()
       self._logger.log(".....applied surcharge for {} destinations {:.4f}s".format(cursor.rowcount, end - start))
-    # dovrei matchare le destination da listino a surcharge
-    # per le origin swiss, italia, quello che voglio
-    # se ho italy e match di destination ok applico
-    # --- righe ROW ---
-    # ORIGIN Switzerland che ha prefix 41
-    # DESTINATION Italy Mobile Vodafone non ha una riga nel surcharge di Switzerland 41
-    # ma esiste la ROW 4 con quella destination, quindi ricade la

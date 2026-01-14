@@ -2,6 +2,7 @@ from utils.style import Logger
 
 
 class SqlHelper:
+  """Just a SQL helper class to perform simple operations"""
   def __init__(self, conn):
     self._conn = conn
     self._logger = Logger()
@@ -53,7 +54,9 @@ class SqlHelper:
           tables = [tables]
 
         for table_name in tables:
-          sql = """DROP TABLE IF EXISTS {0};""".format(table_name)
+          sql = """
+          DROP TABLE IF EXISTS {0};
+          """.format(table_name)
           self._logger.log("Executing\n{}".format(sql))
           cursor.execute(sql)
           self._logger.log(".....yey")
@@ -74,8 +77,9 @@ class SqlHelper:
     """
     try:
       with self._conn.cursor() as cursor:
-        sql = """CREATE INDEX `{idx}` ON {table} ({column})""".format(
-          idx=idx, table=table, column=column)
+        sql = """
+        CREATE INDEX `{idx}` ON {table} ({column})
+        """.format(idx=idx, table=table, column=column)
         self._logger.log("Executing\n{}".format(sql))
         cursor.execute(sql)
         self._logger.log(".....yey")

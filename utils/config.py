@@ -13,7 +13,7 @@ RATECARD_CONFIG = {
     }
   },
   'colt': {
-    'ratecard_table': 'colt_ratecard_{origin_country_code}',  # to be formatted with origin country
+    'ratecard_table': 'colt_ratecard_{origin_country_code}',
     'surcharge_table': 'colt_surcharge_{origin_country_code}',
     'merged_table': 'colt_ratecard_merged_{origin_country_code}',
     'dialprefix_idx': 'colt_{origin_country_code}_dialprefix_IDX',
@@ -27,3 +27,5 @@ RATECARD_CONFIG = {
 }
 
 BATCH_INSERT_SIZE = 5000
+
+DEBUG_MODE = False

@@ -6,6 +6,7 @@ init(autoreset=True)
 
 
 class Logger:
+  """Just a simple Logger class to uniform the printed lines"""
   LEVELS = {
     "INFO": Fore.LIGHTCYAN_EX + "[INFO] " + Style.BRIGHT,
     "SUCCESS": Fore.GREEN + "[SUCCESS] " + Style.BRIGHT,
