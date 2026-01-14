@@ -2,6 +2,7 @@ import time
 
 from utils.config import RATECARD_CONFIG
 from utils.costants import COUNTRY_CODE_NAME_MAP
+from utils.database.sql import SqlHelper
 from utils.style import Logger
 
 from tabulate import tabulate
@@ -12,6 +13,7 @@ class SupplierRateCardMerger(object):
   def __init__(self, conn, origin_country_code):
     self._conn = conn
     self._origin_country_code = origin_country_code
+    self._sql_helper = SqlHelper(conn)
     self._logger = Logger()
 
 
@@ -82,33 +84,26 @@ class SupplierRateCardMerger(object):
           origin_country_code=self._origin_country_code),
       )
       cursor.execute(sql)
-
-      sql = """
-      CREATE INDEX `{idx_name}` ON {table} (dialprefix);
-      """.format(
-        idx_name=RATECARD_CONFIG[base_supplier]['dialprefix_idx'].format(origin_country_code=self._origin_country_code),
-        table=merged_table)
-      cursor.execute(sql)
       end = time.time()
+
+      self._sql_helper.create_index(
+        idx=RATECARD_CONFIG[base_supplier]['dialprefix_idx'].format(origin_country_code=self._origin_country_code),
+        table=merged_table,
+        column="dialprefix"
+      )
+
 
       self._logger.log(
         "...succesfullty inserted {} into table {} in {:.4f}s".format(cursor.rowcount, RATECARD_CONFIG[base_supplier][
           'merged_table'].format(origin_country_code=self._origin_country_code), end - start))
 
-  def _drop_merged_table(self, base_supplier):
-    with self._conn.cursor() as cursor:
-      table_name = RATECARD_CONFIG[base_supplier]['merged_table'].format(origin_country_code=self._origin_country_code)
-      self._logger.log("Deleting {} table from the db...".format(table_name))
-
-      sql = """DROP TABLE IF EXISTS {0};""".format(table_name)
-      cursor.execute(sql)
-      self._logger.log(".....done")
-
   def merge_into_base(self, base_supplier, fallback_supplier, clean_existing=True):
     try:
       if clean_existing:
         self._logger.warning("All existing records will be deleted.")
-        self._drop_merged_table(base_supplier)
+        merged_table_table = RATECARD_CONFIG[base_supplier]['merged_table'].format(
+          origin_country_code=self._origin_country_code)
+        self._sql_helper.drop_tables(merged_table_table)
 
       self._logger.info(
         "***** MERGING {fallback_supplier} ratecard into {base_supplier} ratecard - {country_name} *****".format(

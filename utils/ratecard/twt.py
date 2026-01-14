@@ -33,7 +33,7 @@ class RateCardTwt(RateCardGenerationService):
   def _load_surcharge_data(self, clean_existing=True):
     self._logger.info("Importing {} into table {}".format(self._surcharge_fn, self._surcharge_table))
     if clean_existing:
-      self._drop_existing_tables(self._surcharge_table)
+      self._sql_helper.drop_tables(self._surcharge_table)
     self._create_surcharge_table()
     # Load all data
     df = pd.read_excel(self._surcharge_fn, header=2)

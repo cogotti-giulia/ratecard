@@ -30,7 +30,7 @@ class RateCardColt(RateCardGenerationService):
 
   def _load_surcharge_data(self, clean_existing=True):
     if clean_existing:
-      self._drop_existing_tables(self._surcharge_table)
+      self._sql_helper.drop_tables(self._surcharge_table)
     self._create_surcharge_table()
 
     self._logger.info("Merging {} and {}".format(self._surcharge_origin_fn, self._surcharge_asr_fn))
