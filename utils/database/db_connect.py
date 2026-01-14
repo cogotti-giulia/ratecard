@@ -27,3 +27,32 @@ def get_db_connection():
     if conn and conn.is_connected():
       conn.close()
       logger.log("Database connection closed")
+
+from contextlib import contextmanager
+
+@contextmanager
+def get_connection_cursor(conn, commit=False):
+  """
+  Context manager for a MySQL cursor (Python 2.7 safe).
+
+  Args:
+      conn: MySQL connection
+      commit: if True, commits changes on exit
+  """
+  cursor = conn.cursor()
+  try:
+    yield cursor
+    if commit:
+      conn.commit()
+  except Exception:
+    conn.rollback()
+    raise
+  finally:
+    # In Python 2.7, explicitly consume any remaining rows to prevent "Unread result"
+    try:
+      while cursor.nextset():
+        pass
+    except:
+      pass
+    cursor.close()
+

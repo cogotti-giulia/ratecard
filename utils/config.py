@@ -1,3 +1,5 @@
+import os
+
 RATECARD_CONFIG = {
   'twt': {
     'ratecard_table': 'twt_ratecard_{origin_country_code}',
@@ -29,3 +31,6 @@ RATECARD_CONFIG = {
 BATCH_INSERT_SIZE = 5000
 
 DEBUG_MODE = False
+
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+STATIC_DOC_ROOT = os.path.join(BASE_DIR, 'docs')

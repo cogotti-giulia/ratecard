@@ -2,6 +2,7 @@ import time
 
 from utils.config import RATECARD_CONFIG
 from utils.costants import COUNTRY_CODE_NAME_MAP
+from utils.database.db_connect import get_connection_cursor
 from utils.database.sql import SqlHelper
 from utils.style import Logger
 
@@ -17,7 +18,7 @@ class SupplierRateCardMerger(object):
     self._logger = Logger()
 
   def _warn_on_missing_buyrates(self, base_supplier):
-    with self._conn.cursor() as cursor:
+    with get_connection_cursor(self._conn) as cursor:
       sql = """
       SELECT * from {0} 
       where buyrate is null; """.format(
@@ -36,7 +37,7 @@ class SupplierRateCardMerger(object):
 
   def _build_merged_ratecard_and_add_dialprefix_index(self, base_supplier, fallback_supplier):
 
-    with self._conn.cursor() as cursor:
+    with get_connection_cursor(self._conn, commit=True) as cursor:
       start = time.time()
 
       merged_table = RATECARD_CONFIG[base_supplier]['merged_table'].format(

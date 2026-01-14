@@ -1,6 +1,7 @@
 import time
 
 import pandas as pd
+from utils.database.db_connect import get_connection_cursor
 
 from utils.ratecard.base import RateCardGenerationService
 from utils.config import RATECARD_CONFIG, BATCH_INSERT_SIZE
@@ -48,7 +49,7 @@ class RateCardTwt(RateCardGenerationService):
       # in case twt wakes up and decides to use one table as every human would have done on this planet
       data_frames = [df]
 
-    with self._conn.cursor() as cursor:
+    with get_connection_cursor(self._conn, commit=True) as cursor:
       sql = "INSERT INTO {0} (origin_name, origin_prefix, destination, surcharge_eur) VALUES (%s, %s, %s, %s)".format(
         self._surcharge_table)
 
@@ -76,7 +77,7 @@ class RateCardTwt(RateCardGenerationService):
     origin_country_prefix = COUNTRY_PREFIX_MAP[self._origin_country]
     self._logger.info(
       "Applying surcharge for all {} ({}) destinations...".format(self._origin_country, origin_country_prefix))
-    with self._conn.cursor() as cursor:
+    with get_connection_cursor(self._conn, commit=True) as cursor:
       sql = """UPDATE {ratecard_table} rc
               JOIN {surcharge_table} ts1 on rc.destination = ts1.destination 
               SET rc.buyrate = (rc.buyrate + ts1.surcharge_eur)

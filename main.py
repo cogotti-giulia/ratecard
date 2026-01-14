@@ -1,10 +1,12 @@
 import argparse
 import sys
+import time
 
 from utils.config import RATECARD_CONFIG, DEBUG_MODE
 from utils.costants import COUNTRY_CODE_NAME_MAP
 from utils.database.db_connect import get_db_connection
 from utils.database.sql import SqlHelper
+from utils.exporter import BaseDataFrameExporter, BaseSqlExporter
 from utils.ratecard.evaluator import RatecardRouteEvaluator
 from utils.ratecard.merger import SupplierRateCardMerger
 from utils.ratecard.twt import RateCardTwt
@@ -40,6 +42,7 @@ def validate_arguments(args):
 
 def main(args):
   is_everything_good = validate_arguments(args)
+  start = time.time()
   if not is_everything_good:
     sys.exit(1)
 
@@ -86,7 +89,21 @@ def main(args):
           surcharge_tables = [RATECARD_CONFIG[supplier]["surcharge_table"].format(origin_country_code=origin_country_code) for supplier in args.supplier]
           tables = ratecard_tables + surcharge_tables
           sql_helper.drop_tables(tables)
+
+        tables_to_export =  [RATECARD_CONFIG[supplier]["merged_table"].format(origin_country_code=origin_country_code) for supplier in args.supplier]
+        print(tables_to_export)
+        for table in tables_to_export:
+          query = """
+          SELECT * FROM {table}
+          WHERE buyrate IS NOT NULL;
+          """.format(table=table)
+          exporter = BaseSqlExporter(conn, query, table)
+          exporter.to_csv()
+
+
   print '\n'
+  end = time.time()
+  Logger.success("Everything went great! At least i hope so. Execution time: {}".format(end-start))
 
 
 if __name__ == '__main__':

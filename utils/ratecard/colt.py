@@ -5,6 +5,7 @@ import pandas as pd
 from tabulate import tabulate
 
 from utils.costants import COUNTRY_CODE_NAME_MAP
+from utils.database.db_connect import get_connection_cursor
 from utils.ratecard.base import RateCardGenerationService
 from utils.config import RATECARD_CONFIG, DEBUG_MODE
 
@@ -77,7 +78,7 @@ class RateCardColt(RateCardGenerationService):
       ), warning_detail='\n' + tabulate(df_to_log, headers='keys', tablefmt='grid', showindex=False))
 
     relevant_column_names = ['origin_name', 'destination', 'surcharge_eur']
-    with self._conn.cursor() as cursor:
+    with get_connection_cursor(self._conn, commit=True) as cursor:
       sql = "INSERT INTO {0} (origin_name, destination, surcharge_eur) VALUES (%s, %s, %s)".format(
         self._surcharge_table)
       rows = (
@@ -94,7 +95,7 @@ class RateCardColt(RateCardGenerationService):
     # easy ho gia le righe con origine e destinazione
     self._logger.info(
       "Applying surcharge for all {} destinations...".format(self._origin_country))
-    with self._conn.cursor() as cursor:
+    with get_connection_cursor(self._conn, commit=True) as cursor:
       sql = """
         UPDATE {ratecard_table} rc_table
         JOIN {surcharge_table} sur_table on sur_table.destination = rc_table.destination 

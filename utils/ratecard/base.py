@@ -1,6 +1,7 @@
 import time
 from abc import ABCMeta, abstractmethod
 
+from utils.database.db_connect import get_connection_cursor
 from utils.database.sql import SqlHelper
 from utils.style import Logger
 
@@ -29,14 +30,13 @@ class RateCardGenerationService(object):
     """
     start = time.time()
     self._logger.info("Importing {} into table {}".format(self._ratecard_fn, self._ratecard_table))
-    data_to_insert = []
 
     if clean_existing:
       self._sql_helper.drop_tables(self._ratecard_table)
 
     self._create_ratecard_table_with_index()
 
-    with self._conn.cursor() as cursor:
+    with get_connection_cursor(self._conn, commit=True) as cursor:
       sql = """
         LOAD DATA LOCAL INFILE %s
         INTO TABLE {ratecard_table}
