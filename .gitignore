@@ -1,1 +1,4 @@
 /utils/database/db_config.py
+/docs/
+/.venv/
+/.idea/

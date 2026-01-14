@@ -1,12 +1,15 @@
+import time
+
 import pandas as pd
 
-from utils.ratecard.base import RateCardGenerator
+from utils.ratecard.base import RateCardGenerationService
 from utils.config import RATECARD_CONFIG, BATCH_INSERT_SIZE
 from utils.costants import COUNTRY_PREFIX_MAP, COUNTRY_CODE_NAME_MAP
 
 cfg = RATECARD_CONFIG['twt']
 
-class RateCardTwt(RateCardGenerator):
+
+class RateCardTwt(RateCardGenerationService):
   STANDARDIZED_SURCHARGE_COLUMNS = {
     'ORIGIN NAME': 'origin_name',
     'ORIGIN PREFIX': 'origin_prefix',
@@ -21,15 +24,16 @@ class RateCardTwt(RateCardGenerator):
       conn,
       COUNTRY_CODE_NAME_MAP[origin_country_code],
       ratecard_fn,
-      cfg['ratecard_table'].format(origin_country_short=origin_country_code),
-      cfg['surcharge_table'].format(origin_country_short=origin_country_code)
+      ratecard_table=cfg['ratecard_table'].format(origin_country_code=origin_country_code),
+      surcharge_table=cfg['surcharge_table'].format(origin_country_code=origin_country_code),
+      dialprefix_idx=cfg['dialprefix_idx'].format(origin_country_code=origin_country_code),
     )
     self._logger.info("***** RATECARD TWT - {} *****".format(COUNTRY_CODE_NAME_MAP[origin_country_code]))
 
-  def _import_surcharge(self, clean_existing=True):
+  def _load_surcharge_data(self, clean_existing=True):
     self._logger.info("Importing {} into table {}".format(self._surcharge_fn, self._surcharge_table))
     if clean_existing:
-      self._clean_db(self._surcharge_table)
+      self._drop_existing_tables(self._surcharge_table)
     self._create_surcharge_table()
     # Load all data
     df = pd.read_excel(self._surcharge_fn, header=2)
@@ -77,27 +81,29 @@ class RateCardTwt(RateCardGenerator):
 
         self._logger.log("Inserted batch of {} records.".format(len(values_to_insert)))
 
-  def _apply_surcharge(self):
+  def _apply_surcharge_to_ratecard(self):
+    start = time.time()
     origin_country_prefix = COUNTRY_PREFIX_MAP[self._origin_country]
     self._logger.info(
       "Applying surcharge for all {} ({}) destinations...".format(self._origin_country, origin_country_prefix))
     with self._conn.cursor() as cursor:
-      sql = """UPDATE {0} tl1
-              JOIN {1} ts1 on tl1.destination = ts1.destination 
-              SET tl1.buyrate = (tl1.buyrate + ts1.surcharge_eur)
+      sql = """UPDATE {ratecard_table} rc
+              JOIN {surcharge_table} ts1 on rc.destination = ts1.destination 
+              SET rc.buyrate = (rc.buyrate + ts1.surcharge_eur)
               WHERE (ts1.origin_name = %(origin_name)s 
                 OR ((ts1.origin_name = 'ROW' AND ts1.origin_prefix LIKE %(origin_prefix)s) 
                   AND NOT EXISTS (
                     SELECT 1
-                    FROM {1} ts2
-                    WHERE ts2.destination = ts1.destination
-                      AND ts2.origin_name = %(origin_name)s
+                    FROM {surcharge_table} sur_inner
+                    WHERE sur_inner.destination = ts1.destination
+                      AND sur_inner.origin_name = %(origin_name)s
                   )
                 )
-              );""".format(self._ratecard_table, self._surcharge_table)
+              );""".format(ratecard_table=self._ratecard_table, surcharge_table=self._surcharge_table)
 
       cursor.execute(sql, {'origin_name': self._origin_country, 'origin_prefix': str(origin_country_prefix)[0] + '%%'})
-      self._logger.log(".....applied surcharge for {} destinations".format(cursor.rowcount))
+      end = time.time()
+      self._logger.log(".....applied surcharge for {} destinations {:.4f}s".format(cursor.rowcount, end - start))
     # dovrei matchare le destination da listino a surcharge
     # per le origin swiss, italia, quello che voglio
     # se ho italy e match di destination ok applico

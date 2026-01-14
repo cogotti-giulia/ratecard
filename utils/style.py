@@ -4,12 +4,13 @@ from colorama import Fore, Style, init
 # Initialize colorama
 init(autoreset=True)
 
+
 class Logger:
   LEVELS = {
     "INFO": Fore.LIGHTCYAN_EX + "[INFO] " + Style.BRIGHT,
-    "SUCCESS": Fore.GREEN + "[SUCCESS] "  + Style.BRIGHT,
-    "WARNING": Fore.YELLOW + Style.BRIGHT + "[WARNING] "  + Style.BRIGHT,
-    "ERROR": Fore.RED + Style.BRIGHT + "[ERROR] "  + Style.BRIGHT,
+    "SUCCESS": Fore.GREEN + "[SUCCESS] " + Style.BRIGHT,
+    "WARNING": Fore.YELLOW + Style.BRIGHT + "[WARNING] " + Style.BRIGHT,
+    "ERROR": Fore.RED + Style.BRIGHT + "[ERROR] " + Style.BRIGHT,
   }
 
   @staticmethod

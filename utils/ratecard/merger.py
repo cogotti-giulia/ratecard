@@ -1,5 +1,4 @@
 import time
-from sgmllib import endbracket
 
 from utils.config import RATECARD_CONFIG
 from utils.costants import COUNTRY_CODE_NAME_MAP
@@ -15,6 +14,7 @@ class SupplierRateCardMerger(object):
     self._origin_country_code = origin_country_code
     self._logger = Logger()
 
+
   def _warn_on_missing_buyrates(self, base_supplier):
     with self._conn.cursor() as cursor:
       sql = """
@@ -28,8 +28,9 @@ class SupplierRateCardMerger(object):
       headers = [desc[0] for desc in cursor.description]  # column names
 
       self._logger.warning(
-        "Missing base rating tiers in '{0}'.\nMake sure to add a buyrate for them. Check the details below.".format(
-          RATECARD_CONFIG[base_supplier]['ratecard_table'].format(origin_country_code=self._origin_country_code)
+        "Missing base rating tiers in '{0}'.\nMake sure to add a buyrate for them in the {1}. Check the details below.".format(
+          RATECARD_CONFIG[base_supplier]['ratecard_table'].format(origin_country_code=self._origin_country_code),
+          RATECARD_CONFIG[base_supplier]['merged_table'].format(origin_country_code=self._origin_country_code)
         ), warning_detail='\n' + tabulate(rows, headers=headers, tablefmt='grid', showindex=False))
 
   def _build_merged_ratecard_and_add_dialprefix_index(self, base_supplier, fallback_supplier):
@@ -38,7 +39,7 @@ class SupplierRateCardMerger(object):
       start = time.time()
 
       merged_table = RATECARD_CONFIG[base_supplier]['merged_table'].format(
-          origin_country_code=self._origin_country_code)
+        origin_country_code=self._origin_country_code)
       sql = """
           CREATE TABLE {merged_table} AS
          SELECT 
@@ -77,14 +78,16 @@ class SupplierRateCardMerger(object):
         merged_table=merged_table,
         base_supplier=RATECARD_CONFIG[base_supplier]['ratecard_table'].format(
           origin_country_code=self._origin_country_code),
-        fallback_supplier=RATECARD_CONFIG[fallback_supplier]['ratecard_table'].format(origin_country_code=self._origin_country_code),
+        fallback_supplier=RATECARD_CONFIG[fallback_supplier]['ratecard_table'].format(
+          origin_country_code=self._origin_country_code),
       )
       cursor.execute(sql)
 
       sql = """
       CREATE INDEX `{idx_name}` ON {table} (dialprefix);
-      """.format(idx_name=RATECARD_CONFIG[base_supplier]['dialprefix_idx'].format(origin_country_code=self._origin_country_code),
-                 table=merged_table)
+      """.format(
+        idx_name=RATECARD_CONFIG[base_supplier]['dialprefix_idx'].format(origin_country_code=self._origin_country_code),
+        table=merged_table)
       cursor.execute(sql)
       end = time.time()
 
