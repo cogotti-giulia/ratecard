@@ -6,7 +6,7 @@ from utils.config import RATECARD_CONFIG, DEBUG_MODE
 from utils.costants import COUNTRY_CODE_NAME_MAP
 from utils.database.db_connect import get_db_connection
 from utils.database.sql import SqlHelper
-from utils.exporter import BaseDataFrameExporter, BaseSqlExporter
+from utils.exporter import BaseSqlExporter
 from utils.ratecard.evaluator import RatecardRouteEvaluator
 from utils.ratecard.merger import SupplierRateCardMerger
 from utils.ratecard.twt import RateCardTwt
@@ -21,7 +21,7 @@ def validate_arguments(args):
   :param args: parsed arguments
   :return: False if arguments are invalid, True otherwise
   """
-  supplier = args.supplier
+  supplier = args.suppliers
 
   if 'twt' in supplier:
     # check twt filenames
@@ -49,7 +49,8 @@ def main(args):
   with get_db_connection() as conn:
     if conn and conn.is_connected():
       for origin_country_code in args.surcharge_origin:
-        if 'twt' in args.supplier:
+        # generating ratecard and applying sourcharge for suppliers
+        if 'twt' in args.suppliers:
           twt = RateCardTwt(
             conn,
             origin_country_code=origin_country_code,
@@ -61,7 +62,7 @@ def main(args):
           )
           print '\n'
 
-        if 'colt' in args.supplier:
+        if 'colt' in args.suppliers:
           colt = RateCardColt(
             conn,
             origin_country_code=origin_country_code,
@@ -73,7 +74,7 @@ def main(args):
             # clean_existing=False
           )
 
-        if 'colt' in args.supplier and 'twt' in args.supplier:
+        if 'colt' in args.suppliers and 'twt' in args.suppliers:
           print '\n'
           combinator = SupplierRateCardMerger(conn, origin_country_code)
           combinator.merge_into_base('colt', 'twt')
@@ -85,12 +86,12 @@ def main(args):
 
         if not DEBUG_MODE:
           sql_helper = SqlHelper(conn)
-          ratecard_tables = [RATECARD_CONFIG[supplier]["ratecard_table"].format(origin_country_code=origin_country_code) for supplier in args.supplier]
-          surcharge_tables = [RATECARD_CONFIG[supplier]["surcharge_table"].format(origin_country_code=origin_country_code) for supplier in args.supplier]
+          ratecard_tables = [RATECARD_CONFIG[supplier]["ratecard_table"].format(origin_country_code=origin_country_code) for supplier in args.suppliers]
+          surcharge_tables = [RATECARD_CONFIG[supplier]["surcharge_table"].format(origin_country_code=origin_country_code) for supplier in args.suppliers]
           tables = ratecard_tables + surcharge_tables
           sql_helper.drop_tables(tables)
 
-        tables_to_export =  [RATECARD_CONFIG[supplier]["merged_table"].format(origin_country_code=origin_country_code) for supplier in args.supplier]
+        tables_to_export =  [RATECARD_CONFIG[supplier]["merged_table"].format(origin_country_code=origin_country_code) for supplier in args.suppliers]
         print(tables_to_export)
         for table in tables_to_export:
           query = """
@@ -118,7 +119,7 @@ if __name__ == '__main__':
     help=u"The origin country to apply surcharge for."
   )
   parser.add_argument(
-    '-s', '--supplier',
+    '-s', '--suppliers',
     nargs=2,
     choices=RATECARD_CONFIG.keys(),
     help=u"The suppliers to import ratecard, apply surcharge and merging (if more than one)."

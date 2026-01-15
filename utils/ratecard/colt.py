@@ -13,7 +13,7 @@ cfg = RATECARD_CONFIG['colt']
 
 
 class RateCardColt(RateCardGenerationService):
-
+  """Specific implementation for COLT supplier"""
   def __init__(self, conn, origin_country_code, ratecard_fn, surcharge_origin_fn, surcharge_asr_fn):
     self._surcharge_origin_fn = surcharge_origin_fn
     self._surcharge_asr_fn = surcharge_asr_fn
@@ -30,6 +30,24 @@ class RateCardColt(RateCardGenerationService):
     self._logger.info("***** RATECARD COLT - {} *****".format(COUNTRY_CODE_NAME_MAP[origin_country_code]))
 
   def _load_surcharge_data(self, clean_existing=True):
+    """
+    Combine the 2 xlxs files
+    - df_one is the one specifying surcharge group for origin to destination
+    - df_two is the one with actual prices for the destination, based on surcharge group
+
+    Uses a temp_key in the df_one <Destination Tier-Code>-<Origin Surcharge Group> to perform the match with df_one on
+    <Origin & Destination Rating Tier-Code>.
+    The match is done using a "left join" to warn in case of missing rating tiers in the df_two, beacuse some
+    destinations may not be properly surcharged :(
+
+    At the end loads relevant columns, after the naming standardization, data into the surcharge table.
+    ['origin_name', 'destination', 'surcharge_eur']
+
+    origin_prefix in the surcharge_table will always be filled with None, it exists in the db table just to uniform
+    the table between different suppliers
+    :param clean_existing:
+    :return:
+    """
     if clean_existing:
       self._sql_helper.drop_tables(self._surcharge_table)
     self._create_surcharge_table()
@@ -91,8 +109,11 @@ class RateCardColt(RateCardGenerationService):
       self._logger.log("Successfully inserted {0} records.".format(renamed_merged_df.shape[0]))
 
   def _apply_surcharge_to_ratecard(self):
+    """
+    Origin and destination and price are in the same table, so i just need to apply the surcharge to the buyprice on the
+    ratecard_table
+    """
     start = time.time()
-    # easy ho gia le righe con origine e destinazione
     self._logger.info(
       "Applying surcharge for all {} destinations...".format(self._origin_country))
     with get_connection_cursor(self._conn, commit=True) as cursor:

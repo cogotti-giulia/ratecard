@@ -8,22 +8,27 @@ from utils.style import Logger
 
 @contextmanager
 def get_db_connection():
+  """
+  Context manager that creates a database connection.
+  Whatever happens it happens, but at the end it closes the connection (even in case of errors).
+  :return:
+  """
   logger = Logger()
   conn = None
   try:
-    # 1. SETUP: Connect to DB
+    # connect to DB
     conn = mysql.connector.connect(**ratecard_db_config)
 
-    # 2. YIELD: Give control back to the main script
+    # give control back to the main script
     yield conn
 
   except Error as e:
     logger.error("Database error", error_detail=e)
     # Optional: Raise the error again if you want the main script to crash
-    # raise e
+    raise e
 
   finally:
-    # 3. TEARDOWN: This runs no matter what happens (even on errors)
+    # this runs no matter what happens (even on errors)
     if conn and conn.is_connected():
       conn.close()
       logger.log("Database connection closed")
@@ -33,11 +38,11 @@ from contextlib import contextmanager
 @contextmanager
 def get_connection_cursor(conn, commit=False):
   """
-  Context manager for a MySQL cursor (Python 2.7 safe).
+  Context manager for a MySQL cursor.
+  Whatever happens it happens, but at the end it closes the cursor (even in case of errors).
 
-  Args:
-      conn: MySQL connection
-      commit: if True, commits changes on exit
+  :param conn: MySQL connection
+  :param commit: if True, commits changes on exit
   """
   cursor = conn.cursor()
   try:

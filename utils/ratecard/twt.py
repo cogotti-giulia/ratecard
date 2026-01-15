@@ -11,6 +11,7 @@ cfg = RATECARD_CONFIG['twt']
 
 
 class RateCardTwt(RateCardGenerationService):
+  """Specific implementation for TWT supplier"""
   def __init__(self, conn, origin_country_code, ratecard_fn, surcharge_fn):
     self._surcharge_fn = surcharge_fn
     self.STANDARDIZED_SURCHARGE_COLUMNS = cfg['surcharge_columns']
@@ -25,6 +26,18 @@ class RateCardTwt(RateCardGenerationService):
     self._logger.info("***** RATECARD TWT - {} *****".format(COUNTRY_CODE_NAME_MAP[origin_country_code]))
 
   def _load_surcharge_data(self, clean_existing=True):
+    """
+    Reads the surcharge data from the xlxs, if the file is splitted in two tables (as it is at the moment) then finds the
+    split point (where the index is repeated, assuming it's the same) and then merges the 2 tables into one.
+
+    At the end loads relevant columns, after the naming standardization, data into the surcharge table.
+    ['origin_name', 'origin_prefix', 'destination', 'surcharge_eur']
+
+    P.S.: prefix is really, really relevant
+
+    :param clean_existing:
+    :return:
+    """
     self._logger.info("Importing {} into table {}".format(self._surcharge_fn, self._surcharge_table))
     if clean_existing:
       self._sql_helper.drop_tables(self._surcharge_table)
@@ -73,6 +86,18 @@ class RateCardTwt(RateCardGenerationService):
         self._logger.log("Inserted batch of {} records.".format(len(values_to_insert)))
 
   def _apply_surcharge_to_ratecard(self):
+    """
+    A little bit tricky beacuse of the ROW on the origin name.
+    Surcharge is applied when the destination matches exactly the origin name
+      OR when the destination doesn't match it but there's the fallback "ROW" with the origin_prefix starting with the
+      first number of the origin_country_prefix.
+      e.g.:
+        origin country -> Switzerland (41)
+        destination -> Cyprus
+                       No match found for Switzerland 41 Cyprus
+                       Fallback into ROW 4 Cyprus
+    :return:
+    """
     start = time.time()
     origin_country_prefix = COUNTRY_PREFIX_MAP[self._origin_country]
     self._logger.info(

@@ -8,6 +8,7 @@ from utils.style import Logger
 
 # abstract class
 class RateCardGenerationService(object):
+  """To import ratecard and apply surcharge"""
   __metaclass__ = ABCMeta
 
   def __init__(self, conn, origin_country, ratecard_fn, ratecard_table, surcharge_table, dialprefix_idx):

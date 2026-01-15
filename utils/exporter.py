@@ -1,7 +1,6 @@
 import csv
 import datetime
 import os
-from collections import OrderedDict
 
 import pandas as pd
 from utils.config import STATIC_DOC_ROOT
@@ -65,86 +64,3 @@ class BaseSqlExporter(BaseExporter):
     self._sql_helper.execute(self._query, func=save_to_file)
     self._logger.info("Exported data into {}".format(filepath))
     return filepath
-
-
-class BaseDataFrameExporter(BaseExporter):
-  """
-  Pandas exporter helper to create single export files
-  """
-  def __init__(self, data, filename, columns=None):
-    """
-    :param data: Can be a QuerySet, a List of Dicts, or an existing DataFrame.
-    :param filename: Filename of the exported file
-    :param columns: List of columns to export or None, if none automatically use the one passed from the data object
-    """
-    super(BaseDataFrameExporter, self).__init__(filename)
-
-    # Normalize input to a DataFrame
-    if isinstance(data, pd.DataFrame):
-      self.df = data
-    else:
-      # If it's a QuerySet, convert to list to force evaluation
-      # If it's a list of dicts, pandas handles it automatically
-      self.df = pd.DataFrame(list(data), columns=columns)
-
-
-  def to_excel(self, index=False):
-    """
-    create the file and save it in the export path, adding the xls extension to the filename
-    :param index: True if should be added a column index, else False
-    :return: The export filepath
-    """
-    filepath = self._compose_path(extension='xls')
-
-    with pd.ExcelWriter(filepath, engine='xlwt') as writer:
-      self.df.to_excel(writer, index=False)
-    return filepath
-
-  def to_csv(self, index=False):
-    """
-    create the file and save it in the export path, adding the csv extension to the filename
-    :param index: True if should be added a column index, else False
-    :return: The export filepath
-    """
-    filepath = self._compose_path(extension='csv')
-    self.df.to_csv(filepath, index=index, encoding='utf-8')
-    return filepath
-
-
-class MultiSheetsExporter(BaseExporter):
-  """
-  Pandas exporter helper to export multiple sheets (basically for Excel)
-  """
-  def __init__(self, data, filename):
-    """
-    data: should be a dict of QuerySet, a List of Dicts, or an existing DataFrame
-      where the keys are used as sheet names.
-    :param data:
-    :param filename:
-    """
-    super(MultiSheetsExporter, self).__init__(filename)
-    self.sheets = OrderedDict() # keeps original data order!
-
-    for sheet_name, sheet_data in data.items():
-      if isinstance(sheet_data, pd.DataFrame):
-        df = sheet_data
-      else:
-        df = pd.DataFrame(list(sheet_data))
-
-      self.sheets[sheet_name] = df
-
-  def to_excel(self, index=False):
-    """
-    create the file with all sheets and save it in the export path, adding the xls extension to the filename
-    TODO: maybe let the user choose sheet index, instead of a global one
-    :param index: True if should be added a column index, else False
-    """
-    filepath = self._compose_path(extension='xls')
-
-    with pd.ExcelWriter(filepath, engine='xlwt') as writer:
-      for sheet_name, df in self.sheets.items():
-        df.to_excel(
-          writer,
-          sheet_name=sheet_name[:31],  # Excel sheet name limit
-          index=index
-        )

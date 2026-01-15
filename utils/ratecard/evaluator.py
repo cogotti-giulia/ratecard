@@ -5,6 +5,10 @@ from utils.style import Logger
 
 
 class RatecardRouteEvaluator(object):
+  """
+  Assigns route weight to the base supplier (primary or secondary) based on the comparison of the buyprice of the merged ratecards
+  between base_supplier and comparison_supplier
+  """
   PRIMARY_ROUTE_WEIGHT = 0.1
   SECONDARY_ROUTE_WEIGHT = 0.3
 

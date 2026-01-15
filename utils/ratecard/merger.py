@@ -10,6 +10,9 @@ from tabulate import tabulate
 
 
 class SupplierRateCardMerger(object):
+  """Responsible for merging two supplier ratecards (a base supplier and a fallback supplier)
+  into a single merged ratecard table. To cover all dialprefix destinations for the base supplier.
+  """
 
   def __init__(self, conn, origin_country_code):
     self._conn = conn
@@ -18,6 +21,10 @@ class SupplierRateCardMerger(object):
     self._logger = Logger()
 
   def _warn_on_missing_buyrates(self, base_supplier):
+    """
+    Warns for missing base rating tears (no buyrate) in the merged ratecard
+    :param base_supplier:
+    """
     with get_connection_cursor(self._conn) as cursor:
       sql = """
       SELECT * from {0} 
@@ -36,7 +43,20 @@ class SupplierRateCardMerger(object):
         ), warning_detail='\n' + tabulate(rows, headers=headers, tablefmt='grid', showindex=False))
 
   def _build_merged_ratecard_and_add_dialprefix_index(self, base_supplier, fallback_supplier):
+    """
+    Creates the merged ratecard table for base_supplier
 
+    Merges data using the following rules:
+    1. For each fallback prefix, finds the longest matching base prefix
+    2. Uses base destination and buyrate when matched
+    3. Uses fallback destination otherwise
+    4. Adds all base-only prefixes that do not exist in fallback
+    5. Creates an index on dialprefix for performance
+
+    :param base_supplier:
+    :param fallback_supplier:
+    :return:
+    """
     with get_connection_cursor(self._conn, commit=True) as cursor:
       start = time.time()
 
@@ -94,6 +114,12 @@ class SupplierRateCardMerger(object):
           'merged_table'].format(origin_country_code=self._origin_country_code), end - start))
 
   def merge_into_base(self, base_supplier, fallback_supplier, clean_existing=True):
+    """
+    main entry point for merging ratecards
+    :param base_supplier: base supplier name
+    :param fallback_supplier: fallback supplier name
+    :param clean_existing: if True, removes existing tables
+    """
     try:
       if clean_existing:
         self._logger.warning("All existing records will be deleted.")
