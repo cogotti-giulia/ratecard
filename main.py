@@ -1,6 +1,7 @@
 import argparse
 import sys
 import time
+from itertools import permutations
 
 from utils.config import RATECARD_CONFIG, DEBUG_MODE
 from utils.costants import COUNTRY_CODE_NAME_MAP
@@ -22,6 +23,10 @@ def validate_arguments(args):
   :return: False if arguments are invalid, True otherwise
   """
   supplier = args.suppliers
+
+  if len(args.suppliers) < 2:
+    Logger.error("At least two suppliers must be specified.")
+    return False
 
   if 'twt' in supplier:
     # check twt filenames
@@ -74,15 +79,15 @@ def main(args):
             # clean_existing=False
           )
 
-        if 'colt' in args.suppliers and 'twt' in args.suppliers:
-          print '\n'
+        # this works even if there are more than 2 suppliers
+        if len(args.suppliers) > 1:
           combinator = SupplierRateCardMerger(conn, origin_country_code)
-          combinator.merge_into_base('colt', 'twt')
-          combinator.merge_into_base('twt', 'colt')
-          print '\n'
           evaluator = RatecardRouteEvaluator(conn, origin_country_code)
-          evaluator.assign_route_weights('colt', 'twt')
-          evaluator.assign_route_weights('twt', 'colt')
+
+          for base, other in permutations(args.suppliers, 2):
+            combinator.merge_into_base(base, other)
+            evaluator.assign_route_weights(base, other)
+          print '\n'
 
         if not DEBUG_MODE:
           sql_helper = SqlHelper(conn)
@@ -120,9 +125,11 @@ if __name__ == '__main__':
   )
   parser.add_argument(
     '-s', '--suppliers',
-    nargs=2,
+    nargs='+',
     choices=RATECARD_CONFIG.keys(),
-    help=u"The suppliers to import ratecard, apply surcharge and merging (if more than one)."
+    help=u"Supplier names to be considered for ratecard import, surcharge application, and mutual ratecard merging."
+        "For every ordered supplier pair (A -> B and B -> A), merge and route-weight assignment operations are executed. "
+        "At least two suppliers must be specified."
   )
   parser.add_argument(
     '--ratecard-twt-fn',
