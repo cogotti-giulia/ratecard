@@ -4,14 +4,14 @@
 Vedi documento su http://docs.voiptelitalia.it/s/b97de51e-ab9f-4e0c-86da-b7f3ca993e34 per avere una panoramica generale.
 
 1. Crea un database mysql e assicurati di sistemare la configurazione nel file `utils/database/db_config.py`.
-2. Lancia lo script python
-# Script per gestire il tutto
+2. Lancia lo script python desiderato
 
+## Script per inizializzazione listini
 
 1. Crea un database mysql e assicurati di sistemare la configurazione nel file `utils/database/db_config.py`.
 2. Lancia lo script con
    ```bash
-   python main.py 
+   python init.py 
      -o "CH" "IT" 
      -s "twt" "colt" 
      --ratecard-twt-fn "docs/twt/Rates_VOIPTEL INTERNATIONAL SA (SWD Voip)_SWITCHED GOLD - DIRETTO_20220527_125057.csv" 
@@ -32,3 +32,14 @@ Vedi documento su http://docs.voiptelitalia.it/s/b97de51e-ab9f-4e0c-86da-b7f3ca9
 | `--surcharge-asr-colt-fn`       | Nome del secondo file xlxs di sovrapprezzo di **COLT**. Quello che, dato codice destinazione e gruppo di surcharge, fornisce il *prezzo* da applicare alla rotta.                                   | str                                                                                              | **✅** **(solo se specificato COLT nei supplier)** |
 | `--verbose` NOT YET IMPLEMENTED | Stampa esageratamente tante righe di log.                                                                                                                                                           | bool                                                                                             | **❌**                                             |
 | `--dry-run` NOT YET IMPLEMENTED | Esegue una simulazione senza scrivere alcun dato nel DB.                                                                                                                                            | bool                                                                                             | **❌**                                             |
+
+
+## Script per selezionare dati dai listini finali
+1. Assicurarsi di aver prima eseguito l'inizializzazione dei listini
+2. Lancia lo script desiderato (tra quelli presenti nella cartella `tools/`) come modulo, quindi utilizzando l'opzione **-m**
+   ```bash
+    python -m tools.export_satellite_ratecard 
+      --origin-country-code "IT" 
+      --suppliers "twt" "colt" 
+    ```
+   

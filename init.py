@@ -103,8 +103,8 @@ def main(args):
           SELECT * FROM {table}
           WHERE buyrate IS NOT NULL;
           """.format(table=table)
-          exporter = BaseSqlExporter(conn, query, table)
-          exporter.to_csv()
+          exporter = BaseSqlExporter(conn, table)
+          exporter.to_csv(query)
 
 
   print '\n'
@@ -114,7 +114,7 @@ def main(args):
 
 if __name__ == '__main__':
   parser = argparse.ArgumentParser(
-    description=u"A script to handle ratecard import, apply of surcharge and merging of them.")
+    description=u"A script to handle ratecard import, apply of surcharge, merging and evaluation best route of them.")
 
   parser.add_argument(
     '-o', '--surcharge-origin',

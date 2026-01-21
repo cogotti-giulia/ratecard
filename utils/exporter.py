@@ -1,6 +1,7 @@
 import csv
 import datetime
 import os
+import xlwt
 
 import pandas as pd
 from utils.config import STATIC_DOC_ROOT
@@ -37,19 +38,18 @@ class BaseExporter(object):
     return filepath
 
 class BaseSqlExporter(BaseExporter):
-  def __init__(self, conn, query, filename):
+  def __init__(self, conn, filename):
     self._conn = conn
-    self._query = query
     self._sql_helper = SqlHelper(conn)
 
     super(BaseSqlExporter, self).__init__(filename)
 
-  def to_csv(self):
+  def to_csv(self, query):
     filepath = self._compose_path(extension='csv')
     def save_to_file(cursor):
       with open(filepath, "wb") as f:
         writer = csv.writer(f)
-        # -- NO HEADER
+        # no header
         while True:
           rows = cursor.fetchmany(1000)
           if not rows:
@@ -61,6 +61,40 @@ class BaseSqlExporter(BaseExporter):
               for item in row
             ])
 
-    self._sql_helper.execute(self._query, func=save_to_file)
+    self._sql_helper.execute(query, func=save_to_file)
+    self._logger.info("Exported data into {}".format(filepath))
+    return filepath
+
+  def to_excel(self, query):
+    filepath = self._compose_path(extension='xls')
+
+    def save_to_file(cursor):
+
+      workbook = xlwt.Workbook()
+      sheet = workbook.add_sheet('Sheet1')
+
+      row_idx = 0
+
+      # header row
+      headers = [col[0] for col in cursor.description]
+      for col_idx, header in enumerate(headers):
+        sheet.write(row_idx, col_idx, header)
+      row_idx += 1
+
+      # data rows
+      while True:
+        rows = cursor.fetchmany(1000)
+        if not rows:
+          break
+
+        for row in rows:
+          for col_idx, item in enumerate(row):
+            item.encode("utf-8") if isinstance(item, unicode) else item
+            sheet.write(row_idx, col_idx, item)
+          row_idx += 1
+
+      workbook.save(filepath)
+
+    self._sql_helper.execute(query, func=save_to_file)
     self._logger.info("Exported data into {}".format(filepath))
     return filepath
