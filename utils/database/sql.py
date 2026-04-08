@@ -5,8 +5,9 @@ from utils.style import Logger
 class SqlHelper:
   """Just a SQL helper class to perform simple operations"""
 
-  def __init__(self, conn):
+  def __init__(self, conn, engine="MyISAM"):
     self._conn = conn
+    self._engine = engine
     self._logger = Logger()
 
   def execute(self, query, commit=False, func=None):
@@ -50,8 +51,8 @@ class SqlHelper:
     sql = """
      CREATE TABLE IF NOT EXISTS `{table}` (
       {columns}
-    ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
-    """.format(table=table_name, columns=columns_sql)
+    ) ENGINE={engine} DEFAULT CHARSET=latin1;
+    """.format(table=table_name, engine=self._engine, columns=columns_sql)
 
     self.execute(sql)
 
